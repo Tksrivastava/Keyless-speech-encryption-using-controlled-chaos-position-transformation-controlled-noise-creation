@@ -1,0 +1,171 @@
+clc;
+function Length_Modified_y = Length_Modifier(y);
+  Root_of_Actual_Length = floor(sqrt(length(y)));
+  if Root_of_Actual_Length^2 != length(y)
+    Root_of_Actual_Length = Root_of_Actual_Length + 1;
+  endif
+  y = reshape(y,1,length(y));
+  Zero_Array = zeros(1,(Root_of_Actual_Length^2 - length(y)));
+  Length_Modified_y = [y Zero_Array];
+  end
+
+clc;
+function drt = DRT(Y);
+  l= length(Y);
+  r = sqrt(l);
+  Y = reshape(Y,r,r);
+  for i = 1:r
+    for j = 1:r
+      T(i,j) = Y(j,(r-1)*(i-1)+j-floor(((r-1)*(i-1)+j-1)/r)*r);
+    endfor
+  endfor
+  drt = reshape(T,1,r^2);
+end
+
+clc;
+function dct = DCT(Y);
+  l = length(Y);
+  r = sqrt(l);
+  Y = reshape(Y,r,r);
+  for i = 1:r
+    for j = 1:r
+      T(j,(r-1)*(i-1)+j-floor(((r-1)*(i-1)+j-1)/r)*r) = Y(i,j);
+    endfor
+  endfor
+  dct = reshape(T,1,r^2);
+end
+
+clc;
+function Compressed_Array = CNG(y,keylength);
+  for i = 1:keylength
+    key(i) = y(1);
+    Temp_Storage = y - key(i);
+    CED_array = Temp_Storage(2:length(Temp_Storage));
+    y = CED_array;
+  endfor
+  public_key = keylength;
+  Compressed_Array = [key y];
+end
+
+function Expand = CNR(y,P);
+  secret_key(1:P) = y(1:P);
+  actual_data((1:(length(y)-P))) = y((P+1):length(y));
+  lkey = P;
+  for i = 1:lkey
+    actual_data = [0 actual_data];
+    actual_data = actual_data + secret_key(lkey + 1 - i);
+  endfor
+  Expand = actual_data;
+end
+
+clc;
+function final = Combiner(k1,D);
+ x=dec2bin(k1);
+ l=length(x);
+ x2=str2num(x);
+ i=0;
+ while(i!=l)
+  re=floor(mod(x2,10));
+  X(l-i)=re;
+  x2/=10;
+  i++;
+ endwhile
+ if(mod(l,2)!=0)
+  X=[0 X];
+ endif
+ L=length(X);
+ for i = 0:((L/2)-1)
+  Y(i+1) = not(X(2*(i+1))); 
+  S(i+1) = not(xor(X(2*(i+1)),X(2*i+1)));
+ end
+ e = [Y S];
+ s=0;
+ for  i = 1:length(e)
+   s=s+e(i)*(10^(length(e)-i));
+ endfor
+ s = num2str(s);
+ T = bin2dec(s)
+ final=[D T];
+end
+
+clc;
+function [W,key] = Splitter(e);
+  x = str2num(dec2bin(e(length(e))));
+  L=length(dec2bin(e(length(e))));
+  W(1:(length(e)-1)) = e(1:(length(e)-1));
+  for i=1:L
+    x1(i)= mod(x,10);
+    x/=10;
+  endfor
+  disp(x1);
+  for i=1:L
+    x2(i) = x1(L-i+1);
+  endfor
+  if mod(L,2)!=0
+    x2=[0 x2];
+    L=L+1;
+  endif
+  disp(x2);
+  y(1:L/2) = x2(1:L/2);
+  s(1:L/2) = x2(((L/2)+1):L);
+ for i=1:L/2
+   A(i) = xor(y(i),s(i));
+   B(i) = not(y(i));
+ endfor
+ p = zeros(1,L);
+ for i =0:(L/2-1)
+   p(2*i+1) = A(i+1);
+   p(2*i+2) = B(i+1);
+ endfor
+ sum=0;
+ for q = 1:L
+   sum = sum + p(q)*10^(L-q);
+ endfor
+ key = bin2dec(num2str(sum));
+end
+
+clc;
+clear;
+pkg load image;
+%Recording%
+duration = input('Enter recording duration');
+Sampling_Rate = 20000;
+No_of_Channel = 1;
+No_of_Bits_Per_Sample = 16;
+Rec = audiorecorder(Sampling_Rate,No_of_Bits_Per_Sample,No_of_Channel);
+disp('Start Recording');
+recordblocking(Rec,duration);
+disp('End Recording');
+Recording = getaudiodata(Rec);
+filename = 'Recorded.wav';
+audiowrite(filename,Recording,Sampling_Rate);
+[y,Fs] = audioread(filename);
+disp('Length of Original Speech Data');
+disp(length(y));
+NewLengthY = Length_Modifier(y);
+tic;
+disp('E-Stage 1');
+E1 = DRT(NewLengthY);
+disp('E-Stage 2');
+E2 = CNG(E1,round(0.10*length(E1)));
+E2C1 = Combiner(round(0.10*length(E1)),E2);
+toc;
+E2C = reshape(E2C1,length(E2C1),1);
+audiowrite('Encrypted.wav',E2C,Sampling_Rate);
+[E22,NCKey] = Splitter(E2C1);
+disp('D-Stage 1');
+D1 = CNR(E22,NCKey);
+disp('D-Stage 2');
+D2 = DCT(D1);
+D2C = reshape(D2,length(D2),1);
+audiowrite('Decrypted.wav',D2C,Sampling_Rate);
+NewLengthY = [NewLengthY 0];
+D2 = [D2 0];
+C1 = corr(NewLengthY,E2C1);
+C2 = corr(NewLengthY,D2);
+s = SNR(NewLengthY,E2C1);
+s1 = SNR(NewLengthY,D2);
+m = MSE(NewLengthY,E2C1);
+p = psnr(NewLengthY,E2C1);
+[n,u] = performance(NewLengthY,E2C1);
+Prd = PRD(NewLengthY,E2C1);
