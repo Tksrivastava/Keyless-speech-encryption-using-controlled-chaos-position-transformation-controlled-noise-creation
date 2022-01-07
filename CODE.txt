@@ -1,4 +1,3 @@
-clc;
 function Length_Modified_y = Length_Modifier(y);
   Root_of_Actual_Length = floor(sqrt(length(y)));
   if Root_of_Actual_Length^2 != length(y)
@@ -9,7 +8,6 @@ function Length_Modified_y = Length_Modifier(y);
   Length_Modified_y = [y Zero_Array];
   end
 
-clc;
 function drt = DRT(Y);
   l= length(Y);
   r = sqrt(l);
@@ -22,7 +20,6 @@ function drt = DRT(Y);
   drt = reshape(T,1,r^2);
 end
 
-clc;
 function dct = DCT(Y);
   l = length(Y);
   r = sqrt(l);
@@ -35,7 +32,6 @@ function dct = DCT(Y);
   dct = reshape(T,1,r^2);
 end
 
-clc;
 function Compressed_Array = CNG(y,keylength);
   for i = 1:keylength
     key(i) = y(1);
@@ -58,7 +54,6 @@ function Expand = CNR(y,P);
   Expand = actual_data;
 end
 
-clc;
 function final = Combiner(k1,D);
  x=dec2bin(k1);
  l=length(x);
@@ -88,7 +83,6 @@ function final = Combiner(k1,D);
  final=[D T];
 end
 
-clc;
 function [W,key] = Splitter(e);
   x = str2num(dec2bin(e(length(e))));
   L=length(dec2bin(e(length(e))));
@@ -124,7 +118,6 @@ function [W,key] = Splitter(e);
  key = bin2dec(num2str(sum));
 end
 
-clc;
 clear;
 pkg load image;
 %Recording%
